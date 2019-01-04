@@ -21,6 +21,8 @@ class MarkdownStyleSheet {
     this.strong,
     this.blockquote,
     this.img,
+    this.del,
+    this.light,
     this.blockSpacing,
     this.listIndent,
     this.blockquotePadding,
@@ -44,6 +46,8 @@ class MarkdownStyleSheet {
     'strong': strong,
     'blockquote': blockquote,
     'img': img,
+    'del': del,
+    'light': light,
   };
 
   /// Creates a [MarkdownStyleSheet] from the [TextStyle]s in the provided [ThemeData].
@@ -53,9 +57,9 @@ class MarkdownStyleSheet {
       a: const TextStyle(color: Colors.blue),
       p: theme.textTheme.body1,
       code: new TextStyle(
-        color: Colors.grey.shade700,
-        fontFamily: "monospace",
-        fontSize: theme.textTheme.body1.fontSize * 0.85
+          color: Colors.grey.shade700,
+          fontFamily: "monospace",
+          fontSize: theme.textTheme.body1.fontSize * 0.85
       ),
       h1: theme.textTheme.headline,
       h2: theme.textTheme.title,
@@ -67,21 +71,23 @@ class MarkdownStyleSheet {
       strong: const TextStyle(fontWeight: FontWeight.bold),
       blockquote: theme.textTheme.body1,
       img: theme.textTheme.body1,
+      del: const TextStyle(decoration: TextDecoration.lineThrough),
+      light: const TextStyle(fontWeight: FontWeight.w100),
       blockSpacing: 8.0,
       listIndent: 32.0,
       blockquotePadding: 8.0,
       blockquoteDecoration: new BoxDecoration(
-        color: Colors.blue.shade100,
-        borderRadius: new BorderRadius.circular(2.0)
+          color: Colors.blue.shade100,
+          borderRadius: new BorderRadius.circular(2.0)
       ),
       codeblockPadding: 8.0,
       codeblockDecoration: new BoxDecoration(
-        color: Colors.grey.shade100,
-        borderRadius: new BorderRadius.circular(2.0)
+          color: Colors.grey.shade100,
+          borderRadius: new BorderRadius.circular(2.0)
       ),
       horizontalRuleDecoration: new BoxDecoration(
         border: new Border(
-          top: new BorderSide(width: 5.0, color: Colors.grey.shade300)
+            top: new BorderSide(width: 5.0, color: Colors.grey.shade300)
         ),
       ),
     );
@@ -96,9 +102,9 @@ class MarkdownStyleSheet {
       a: const TextStyle(color: Colors.blue),
       p: theme.textTheme.body1,
       code: new TextStyle(
-        color: Colors.grey.shade700,
-        fontFamily: "monospace",
-        fontSize: theme.textTheme.body1.fontSize * 0.85
+          color: Colors.grey.shade700,
+          fontFamily: "monospace",
+          fontSize: theme.textTheme.body1.fontSize * 0.85
       ),
       h1: theme.textTheme.display3,
       h2: theme.textTheme.display2,
@@ -110,21 +116,23 @@ class MarkdownStyleSheet {
       strong: const TextStyle(fontWeight: FontWeight.bold),
       blockquote: theme.textTheme.body1,
       img: theme.textTheme.body1,
+      del: const TextStyle(decoration: TextDecoration.lineThrough),
+      light: const TextStyle(fontWeight: FontWeight.w100),
       blockSpacing: 8.0,
       listIndent: 32.0,
       blockquotePadding: 8.0,
       blockquoteDecoration: new BoxDecoration(
-        color: Colors.blue.shade100,
-        borderRadius: new BorderRadius.circular(2.0)
+          color: Colors.blue.shade100,
+          borderRadius: new BorderRadius.circular(2.0)
       ),
       codeblockPadding: 8.0,
       codeblockDecoration: new BoxDecoration(
-        color: Colors.grey.shade100,
-        borderRadius: new BorderRadius.circular(2.0)
+          color: Colors.grey.shade100,
+          borderRadius: new BorderRadius.circular(2.0)
       ),
       horizontalRuleDecoration: new BoxDecoration(
         border: new Border(
-          top: new BorderSide(width: 5.0, color: Colors.grey.shade300)
+            top: new BorderSide(width: 5.0, color: Colors.grey.shade300)
         ),
       ),
     );
@@ -146,6 +154,8 @@ class MarkdownStyleSheet {
     TextStyle strong,
     TextStyle blockquote,
     TextStyle img,
+    TextStyle del,
+    TextStyle light,
     double blockSpacing,
     double listIndent,
     double blockquotePadding,
@@ -168,6 +178,8 @@ class MarkdownStyleSheet {
       strong: strong ?? this.strong,
       blockquote: blockquote ?? this.blockquote,
       img: img ?? this.img,
+      del: del ?? this.del,
+      light: light ?? this.light,
       blockSpacing: blockSpacing ?? this.blockSpacing,
       listIndent: listIndent ?? this.listIndent,
       blockquotePadding: blockquotePadding ?? this.blockquotePadding,
@@ -217,6 +229,12 @@ class MarkdownStyleSheet {
   /// The [TextStyle] to use for `img` elements.
   final TextStyle img;
 
+  /// The [TextStyle] to use for `del` elements.
+  final TextStyle del;
+
+  /// The [TextStyle] to use for `light` elements.
+  final TextStyle light;
+
   /// The amount of vertical space to use between block-level elements.
   final double blockSpacing;
 
@@ -262,6 +280,8 @@ class MarkdownStyleSheet {
         && typedOther.strong == strong
         && typedOther.blockquote == blockquote
         && typedOther.img == img
+        && typedOther.del == del
+        && typedOther.light == light
         && typedOther.blockSpacing == blockSpacing
         && typedOther.listIndent == listIndent
         && typedOther.blockquotePadding == blockquotePadding
@@ -287,6 +307,8 @@ class MarkdownStyleSheet {
       strong,
       blockquote,
       img,
+//      del,
+//      light,
       blockSpacing,
       listIndent,
       blockquotePadding,
