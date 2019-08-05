@@ -20,7 +20,8 @@ typedef void MarkdownTapLinkCallback(String href);
 /// Creates a format [TextSpan] given a string.
 ///
 /// Used by [MarkdownWidget] to highlight the contents of `pre` elements.
-abstract class SyntaxHighlighter { // ignore: one_member_abstracts
+abstract class SyntaxHighlighter {
+  // ignore: one_member_abstracts
   /// Returns the formated [TextSpan] for the given string.
   TextSpan format(String source);
 }
@@ -46,8 +47,10 @@ abstract class MarkdownWidget extends StatefulWidget {
     this.syntaxHighlighter,
     this.onTapLink,
     this.imageDirectory,
-  }) : assert(data != null),
-       super(key: key);
+    this.maxLines,
+    this.overflow = TextOverflow.ellipsis,
+  })  : assert(data != null),
+        super(key: key);
 
   /// The Markdown to display.
   final String data;
@@ -67,6 +70,12 @@ abstract class MarkdownWidget extends StatefulWidget {
 
   /// The base directory holding images referenced by Img tags with local file paths.
   final Directory imageDirectory;
+
+  /// If you want text truncation, indicate the max number of lines you want to support
+  final int maxLines;
+
+  /// Specify the text overflow type, defaults to ellipsis
+  final TextOverflow overflow;
 
   /// Subclasses should override this function to display the given children,
   /// which are the parsed representation of [data].
@@ -90,9 +99,7 @@ class _MarkdownWidgetState extends State<MarkdownWidget> implements MarkdownBuil
   @override
   void didUpdateWidget(MarkdownWidget oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (widget.data != oldWidget.data
-        || widget.styleSheet != oldWidget.styleSheet)
-      _parseMarkdown();
+    if (widget.data != oldWidget.data || widget.styleSheet != oldWidget.styleSheet) _parseMarkdown();
   }
 
   @override
@@ -113,34 +120,32 @@ class _MarkdownWidgetState extends State<MarkdownWidget> implements MarkdownBuil
       delegate: this,
       styleSheet: styleSheet,
       imageDirectory: widget.imageDirectory,
+      maxLines: widget.maxLines,
+      overflow: widget.overflow,
     );
     _children = builder.build(document.parseLines(lines));
   }
 
   void _disposeRecognizers() {
-    if (_recognizers.isEmpty)
-      return;
+    if (_recognizers.isEmpty) return;
     final List<GestureRecognizer> localRecognizers = new List<GestureRecognizer>.from(_recognizers);
     _recognizers.clear();
-    for (GestureRecognizer recognizer in localRecognizers)
-      recognizer.dispose();
+    for (GestureRecognizer recognizer in localRecognizers) recognizer.dispose();
   }
 
   @override
   GestureRecognizer createLink(String href) {
     final TapGestureRecognizer recognizer = new TapGestureRecognizer()
       ..onTap = () {
-      if (widget.onTapLink != null)
-        widget.onTapLink(href);
-    };
+        if (widget.onTapLink != null) widget.onTapLink(href);
+      };
     _recognizers.add(recognizer);
     return recognizer;
   }
 
   @override
   TextSpan formatText(MarkdownStyleSheet styleSheet, String code) {
-    if (widget.syntaxHighlighter != null)
-      return widget.syntaxHighlighter.format(code);
+    if (widget.syntaxHighlighter != null) return widget.syntaxHighlighter.format(code);
     return new TextSpan(style: styleSheet.code, text: code);
   }
 
@@ -166,19 +171,22 @@ class MarkdownBody extends MarkdownWidget {
     SyntaxHighlighter syntaxHighlighter,
     MarkdownTapLinkCallback onTapLink,
     Directory imageDirectory,
+    int maxLines,
+    TextOverflow overflow,
   }) : super(
-    key: key,
-    data: data,
-    styleSheet: styleSheet,
-    syntaxHighlighter: syntaxHighlighter,
-    onTapLink: onTapLink,
-    imageDirectory: imageDirectory,
-  );
+          key: key,
+          data: data,
+          styleSheet: styleSheet,
+          syntaxHighlighter: syntaxHighlighter,
+          onTapLink: onTapLink,
+          imageDirectory: imageDirectory,
+          maxLines: maxLines,
+          overflow: overflow,
+        );
 
   @override
   Widget build(BuildContext context, List<Widget> children) {
-    if (children.length == 1)
-      return children.single;
+    if (children.length == 1) return children.single;
     return new Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: children,
@@ -204,15 +212,19 @@ class Markdown extends MarkdownWidget {
     SyntaxHighlighter syntaxHighlighter,
     MarkdownTapLinkCallback onTapLink,
     Directory imageDirectory,
+    int maxLines,
+    TextOverflow overflow,
     this.padding: const EdgeInsets.all(16.0),
   }) : super(
-    key: key,
-    data: data,
-    styleSheet: styleSheet,
-    syntaxHighlighter: syntaxHighlighter,
-    onTapLink: onTapLink,
-    imageDirectory: imageDirectory,
-  );
+          key: key,
+          data: data,
+          styleSheet: styleSheet,
+          syntaxHighlighter: syntaxHighlighter,
+          onTapLink: onTapLink,
+          imageDirectory: imageDirectory,
+          maxLines: maxLines,
+          overflow: overflow,
+        );
 
   /// The amount of space by which to inset the children.
   final EdgeInsets padding;
