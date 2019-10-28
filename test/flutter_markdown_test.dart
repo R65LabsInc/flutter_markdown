@@ -5,11 +5,12 @@
 import 'dart:async';
 import 'dart:io' as io;
 
-import 'package:flutter_markdown/flutter_markdown.dart';
-import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter/gestures.dart';
-import 'package:flutter/widgets.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/widgets.dart';
+import 'package:flutter_markdown/flutter_markdown.dart';
+import 'package:flutter_markdown/src/style_sheet.dart';
+import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/mockito.dart';
 
 void main() {
@@ -33,6 +34,24 @@ void main() {
     _expectWidgetTypes(
         widgets, <Type>[Directionality, MarkdownBody, Column, Wrap, RichText]);
     _expectTextStrings(widgets, <String>['Header']);
+  });
+
+  testWidgets('Strikethrough', (WidgetTester tester) async {
+    await tester.pumpWidget(_boilerplate(const MarkdownBody(data: '~~strikethrough~~')));
+
+    final Iterable<Widget> widgets = tester.allWidgets;
+    _expectWidgetTypes(
+        widgets, <Type>[Directionality, MarkdownBody, Column, Wrap, RichText]);
+    _expectTextStrings(widgets, <String>['strikethrough']);
+  });
+
+  testWidgets('Line break', (WidgetTester tester) async {
+    await tester.pumpWidget(_boilerplate(const MarkdownBody(data: 'line 1  \nline 2')));
+
+    final Iterable<Widget> widgets = tester.allWidgets;
+    _expectWidgetTypes(
+        widgets, <Type>[Directionality, MarkdownBody, Column, Wrap, RichText]);
+    _expectTextStrings(widgets, <String>['line 1\nline 2']);
   });
 
   testWidgets('Empty string', (WidgetTester tester) async {
@@ -71,6 +90,36 @@ void main() {
       'Item 2',
       '•',
       'Item 3',
+    ]);
+  });
+
+  testWidgets('Empty List Item', (WidgetTester tester) async {
+    await tester.pumpWidget(
+      _boilerplate(const MarkdownBody(data: '- \n- Item 2\n- Item 3')),
+    );
+
+    final Iterable<Widget> widgets = tester.allWidgets;
+    _expectTextStrings(widgets, <String>[
+      '•',
+      '•',
+      'Item 2',
+      '•',
+      'Item 3',
+    ]);
+  });
+
+  testWidgets('Task list', (WidgetTester tester) async {
+    await tester.pumpWidget(
+      _boilerplate(const MarkdownBody(data: '- [x] Item 1\n- [ ] Item 2')),
+    );
+
+    final Iterable<Widget> widgets = tester.allWidgets;
+
+    _expectTextStrings(widgets, <String>[
+      String.fromCharCode(Icons.check_box.codePoint),
+      'Item 1',
+      String.fromCharCode(Icons.check_box_outline_blank.codePoint),
+      'Item 2',
     ]);
   });
 
@@ -128,10 +177,12 @@ void main() {
       final TextSpan span = textWidget.text;
 
       final List<Type> gestureRecognizerTypes = <Type>[];
-      span.visitTextSpan((TextSpan textSpan) {
-        TapGestureRecognizer recognizer = textSpan.recognizer;
-        gestureRecognizerTypes.add(recognizer.runtimeType);
-        recognizer.onTap();
+      span.visitChildren((InlineSpan inlineSpan) {
+        if (inlineSpan is TextSpan) {
+          TapGestureRecognizer recognizer = inlineSpan.recognizer;
+          gestureRecognizerTypes.add(recognizer.runtimeType);
+          recognizer.onTap();
+        }
         return true;
       });
 
@@ -155,10 +206,12 @@ void main() {
       final TextSpan span = textWidget.text;
 
       final List<Type> gestureRecognizerTypes = <Type>[];
-      span.visitTextSpan((TextSpan textSpan) {
-        TapGestureRecognizer recognizer = textSpan.recognizer;
-        gestureRecognizerTypes.add(recognizer.runtimeType);
-        recognizer?.onTap();
+      span.visitChildren((InlineSpan inlineSpan) {
+        if (inlineSpan is TextSpan) {
+          TapGestureRecognizer recognizer = inlineSpan.recognizer;
+          gestureRecognizerTypes.add(recognizer.runtimeType);
+          recognizer?.onTap();
+        }
         return true;
       });
 
@@ -183,17 +236,19 @@ void main() {
 
       final RichText firstTextWidget =
           tester.allWidgets.firstWhere((Widget widget) => widget is RichText);
+      final TextSpan firstTextSpan = firstTextWidget.text;
       final Image image =
           tester.allWidgets.firstWhere((Widget widget) => widget is Image);
       final NetworkImage networkImage = image.image;
       final RichText secondTextWidget =
           tester.allWidgets.lastWhere((Widget widget) => widget is RichText);
+      final TextSpan secondTextSpan = secondTextWidget.text;
 
-      expect(firstTextWidget.text.text, 'textbefore ');
-      expect(firstTextWidget.text.style.fontStyle, FontStyle.italic);
+      expect(firstTextSpan.text, 'textbefore ');
+      expect(firstTextSpan.style.fontStyle, FontStyle.italic);
       expect(networkImage.url,'http://img');
-      expect(secondTextWidget.text.text, ' textafter');
-      expect(secondTextWidget.text.style.fontStyle, FontStyle.italic);
+      expect(secondTextSpan.text, ' textafter');
+      expect(secondTextSpan.style.fontStyle, FontStyle.italic);
     });
 
     testWidgets('should work with a link', (WidgetTester tester) async {
@@ -333,6 +388,74 @@ void main() {
     });
   });
 
+  group('Tables', () {
+    testWidgets('should show properly', (WidgetTester tester) async {
+      const String data = '|Header 1|Header 2|\n|-----|-----|\n|Col 1|Col 2|';
+      await tester.pumpWidget(_boilerplate(const MarkdownBody(data: data)));
+
+      final Iterable<Widget> widgets = tester.allWidgets;
+      _expectTextStrings(
+          widgets, <String>['Header 1', 'Header 2', 'Col 1', 'Col 2']);
+    });
+
+    testWidgets('work without the outer pipes', (WidgetTester tester) async {
+      const String data = 'Header 1|Header 2\n-----|-----\nCol 1|Col 2';
+      await tester.pumpWidget(_boilerplate(const MarkdownBody(data: data)));
+
+      final Iterable<Widget> widgets = tester.allWidgets;
+      _expectTextStrings(
+          widgets, <String>['Header 1', 'Header 2', 'Col 1', 'Col 2']);
+    });
+
+    testWidgets('should work with alignments', (WidgetTester tester) async {
+      const String data = '|Header 1|Header 2|\n|:----:|----:|\n|Col 1|Col 2|';
+      await tester.pumpWidget(_boilerplate(const MarkdownBody(data: data)));
+
+      final Iterable<Widget> widgets = tester.allWidgets;
+      final DefaultTextStyle style = widgets.firstWhere((Widget widget) => widget is DefaultTextStyle);
+      final DefaultTextStyle style2 = widgets.lastWhere((Widget widget) => widget is DefaultTextStyle);
+
+      expect(style.textAlign, TextAlign.center);
+      expect(style2.textAlign, TextAlign.right);
+    });
+
+    testWidgets('should work with styling', (WidgetTester tester) async {
+      const String data = '|Header|\n|----|\n|*italic*|';
+      await tester.pumpWidget(_boilerplate(MarkdownBody(data: data)));
+
+      final Iterable<Widget> widgets = tester.allWidgets;
+      final RichText richText = widgets.lastWhere((Widget widget) => widget is RichText);
+
+      _expectTextStrings(widgets, <String>['Header', 'italic']);
+      expect(richText.text.style.fontStyle, FontStyle.italic);
+    });
+
+    testWidgets('should work next to other tables', (WidgetTester tester) async {
+      const String data = '|first header|\n|----|\n|first col|\n\n'
+          '|second header|\n|----|\n|second col|';
+      await tester.pumpWidget(_boilerplate(const MarkdownBody(data: data)));
+
+      final Iterable<Widget> tables = tester.allWidgets.where((Widget widget) => widget is Table);
+
+      expect(tables.length, 2);
+    });
+
+    testWidgets('column width should follow stylesheet', (WidgetTester tester) async {
+      final ThemeData theme = ThemeData.light().copyWith(textTheme: textTheme);
+
+      const String data = '|Header|\n|----|\n|Column|';
+      const FixedColumnWidth columnWidth = FixedColumnWidth(100);
+      final MarkdownStyleSheet style = MarkdownStyleSheet.fromTheme(theme)
+          .copyWith(tableColumnWidth: columnWidth);
+
+      await tester.pumpWidget(_boilerplate(MarkdownBody(data: data, styleSheet: style)));
+
+      final Table table = tester.widget(find.byType(Table));
+
+      expect(table.defaultColumnWidth, columnWidth);
+    });
+  });
+
   group('uri data scheme', () {
     testWidgets('should work with image in uri data scheme', (WidgetTester tester) async {
       const String imageData = '![alt](data:image/gif;base64,R0lGODlhAQABAIAAAAUEBAAAACwAAAAAAQABAAACAkQBADs=)';
@@ -420,11 +543,15 @@ void main() {
   });
 
   testWidgets('Changing config - data', (WidgetTester tester) async {
-    await tester.pumpWidget(_boilerplate(const Markdown(data: 'Data1')));
+    // extract to variable; if run with --track-widget-creation using const
+    // widgets aren't necessarily identical if created on different lines.
+    final markdown = const Markdown(data: 'Data1');
+
+    await tester.pumpWidget(_boilerplate(markdown));
     _expectTextStrings(tester.allWidgets, <String>['Data1']);
 
     final String stateBefore = _dumpRenderView();
-    await tester.pumpWidget(_boilerplate(const Markdown(data: 'Data1')));
+    await tester.pumpWidget(_boilerplate(markdown));
     final String stateAfter = _dumpRenderView();
     expect(stateBefore, equals(stateAfter));
 
@@ -452,6 +579,18 @@ void main() {
     expect(text1.text, isNot(text2.text));
   });
 
+  testWidgets('Changing config - imageBuilder', (WidgetTester tester) async {
+    final String data = '![alt](https://img.png)';
+    final MarkdownImageBuilder builder = (_) => Image.asset('assets/logo.png');
+
+    await tester.pumpWidget(_boilerplate(Markdown(data: data, imageBuilder: builder)));
+
+    final Image image = tester.widget(find.byType(Image));
+
+    expect(image.image.runtimeType, AssetImage);
+    expect((image.image as AssetImage).assetName, 'assets/logo.png');
+  });
+
   testWidgets('Style equality', (WidgetTester tester) async {
     final ThemeData theme = new ThemeData.light().copyWith(textTheme: textTheme);
 
@@ -459,6 +598,19 @@ void main() {
     final MarkdownStyleSheet style2 = new MarkdownStyleSheet.fromTheme(theme);
     expect(style1, equals(style2));
     expect(style1.hashCode, equals(style2.hashCode));
+  });
+
+  testWidgets('should use style textScaleFactor in RichText', (WidgetTester tester) async {
+    await tester.pumpWidget(_boilerplate(
+      MarkdownBody(
+        styleSheet: MarkdownStyleSheet(textScaleFactor: 2.0),
+        data: 'Hello',
+      ),
+    ));
+
+    final RichText richText =
+    tester.allWidgets.firstWhere((Widget widget) => widget is RichText);
+    expect(richText.textScaleFactor, 2.0);
   });
 }
 

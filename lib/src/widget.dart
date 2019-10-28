@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-import 'dart:io';
-
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:markdown/markdown.dart' as md;
@@ -17,25 +15,35 @@ import 'style_sheet.dart';
 /// Used by [MarkdownWidget.onTapLink].
 typedef void MarkdownTapLinkCallback(String href);
 
+/// Signature for custom image widget.
+///
+/// Used by [MarkdownWidget.imageBuilder]
+typedef Widget MarkdownImageBuilder(Uri uri);
+
+/// Signature for custom checkbox widget.
+///
+/// Used by [MarkdownWidget.checkboxBuilder]
+typedef Widget MarkdownCheckboxBuilder(bool value);
+
 /// Creates a format [TextSpan] given a string.
 ///
 /// Used by [MarkdownWidget] to highlight the contents of `pre` elements.
 abstract class SyntaxHighlighter {
   // ignore: one_member_abstracts
-  /// Returns the formated [TextSpan] for the given string.
+  /// Returns the formatted [TextSpan] for the given string.
   TextSpan format(String source);
 }
 
 /// A base class for widgets that parse and display Markdown.
 ///
 /// Supports all standard Markdown from the original
-/// [Markdown specification](https://daringfireball.net/projects/markdown/).
+/// [Markdown specification](https://github.github.com/gfm/).
 ///
 /// See also:
 ///
 ///  * [Markdown], which is a scrolling container of Markdown.
 ///  * [MarkdownBody], which is a non-scrolling container of Markdown.
-///  * <https://daringfireball.net/projects/markdown/>
+///  * <https://github.github.com/gfm/>
 abstract class MarkdownWidget extends StatefulWidget {
   /// Creates a widget that parses and displays Markdown.
   ///
@@ -49,6 +57,9 @@ abstract class MarkdownWidget extends StatefulWidget {
     this.imageDirectory,
     this.maxLines,
     this.overflow = TextOverflow.ellipsis,
+    this.extensionSet,
+    this.imageBuilder,
+    this.checkboxBuilder,
   })  : assert(data != null),
         super(key: key);
 
@@ -68,8 +79,19 @@ abstract class MarkdownWidget extends StatefulWidget {
   /// Called when the user taps a link.
   final MarkdownTapLinkCallback onTapLink;
 
-  /// The base directory holding images referenced by Img tags with local file paths.
-  final Directory imageDirectory;
+  /// The base directory holding images referenced by Img tags with local or network file paths.
+  final String imageDirectory;
+
+  /// Markdown syntax extension set
+  ///
+  /// Defaults to [md.ExtensionSet.gitHubFlavored]
+  final md.ExtensionSet extensionSet;
+
+  /// Call when build an image widget.
+  final MarkdownImageBuilder imageBuilder;
+
+  /// Call when build a checkbox widget.
+  final MarkdownCheckboxBuilder checkboxBuilder;
 
   /// If you want text truncation, indicate the max number of lines you want to support
   final int maxLines;
@@ -83,7 +105,7 @@ abstract class MarkdownWidget extends StatefulWidget {
   Widget build(BuildContext context, List<Widget> children);
 
   @override
-  _MarkdownWidgetState createState() => new _MarkdownWidgetState();
+  _MarkdownWidgetState createState() => _MarkdownWidgetState();
 }
 
 class _MarkdownWidgetState extends State<MarkdownWidget> implements MarkdownBuilderDelegate {
@@ -109,33 +131,38 @@ class _MarkdownWidgetState extends State<MarkdownWidget> implements MarkdownBuil
   }
 
   void _parseMarkdown() {
-    final MarkdownStyleSheet styleSheet = widget.styleSheet ?? new MarkdownStyleSheet.fromTheme(Theme.of(context));
+    final MarkdownStyleSheet styleSheet = widget.styleSheet ?? MarkdownStyleSheet.fromTheme(Theme.of(context));
 
     _disposeRecognizers();
 
-    // TODO: This can be optimized by doing the split and removing \r at the same time
-    final List<String> lines = widget.data.replaceAll('\r\n', '\n').split('\n');
-    final md.Document document = new md.Document(encodeHtml: false);
-    final MarkdownBuilder builder = new MarkdownBuilder(
+    final List<String> lines = widget.data.split(RegExp(r'\r?\n'));
+    final md.Document document = md.Document(
+      extensionSet: widget.extensionSet ?? md.ExtensionSet.gitHubFlavored,
+      inlineSyntaxes: [TaskListSyntax()],
+      encodeHtml: false,
+    );
+    final MarkdownBuilder builder = MarkdownBuilder(
       delegate: this,
       styleSheet: styleSheet,
       imageDirectory: widget.imageDirectory,
       maxLines: widget.maxLines,
       overflow: widget.overflow,
+      imageBuilder: widget.imageBuilder,
+      checkboxBuilder: widget.checkboxBuilder,
     );
     _children = builder.build(document.parseLines(lines));
   }
 
   void _disposeRecognizers() {
     if (_recognizers.isEmpty) return;
-    final List<GestureRecognizer> localRecognizers = new List<GestureRecognizer>.from(_recognizers);
+    final List<GestureRecognizer> localRecognizers = List<GestureRecognizer>.from(_recognizers);
     _recognizers.clear();
     for (GestureRecognizer recognizer in localRecognizers) recognizer.dispose();
   }
 
   @override
   GestureRecognizer createLink(String href) {
-    final TapGestureRecognizer recognizer = new TapGestureRecognizer()
+    final TapGestureRecognizer recognizer = TapGestureRecognizer()
       ..onTap = () {
         if (widget.onTapLink != null) widget.onTapLink(href);
       };
@@ -145,8 +172,11 @@ class _MarkdownWidgetState extends State<MarkdownWidget> implements MarkdownBuil
 
   @override
   TextSpan formatText(MarkdownStyleSheet styleSheet, String code) {
-    if (widget.syntaxHighlighter != null) return widget.syntaxHighlighter.format(code);
-    return new TextSpan(style: styleSheet.code, text: code);
+    code = code.replaceAll(RegExp(r'\n$'), '');
+    if (widget.syntaxHighlighter != null) {
+      return widget.syntaxHighlighter.format(code);
+    }
+    return TextSpan(style: styleSheet.code, text: code);
   }
 
   @override
@@ -155,13 +185,13 @@ class _MarkdownWidgetState extends State<MarkdownWidget> implements MarkdownBuil
 
 /// A non-scrolling widget that parses and displays Markdown.
 ///
-/// Supports all standard Markdown from the original
-/// [Markdown specification](https://daringfireball.net/projects/markdown/).
+/// Supports all GitHub Flavored Markdown from the
+/// [specification](https://github.github.com/gfm/).
 ///
 /// See also:
 ///
 ///  * [Markdown], which is a scrolling container of Markdown.
-///  * <https://daringfireball.net/projects/markdown/>
+///  * <https://github.github.com/gfm/>
 class MarkdownBody extends MarkdownWidget {
   /// Creates a non-scrolling widget that parses and displays Markdown.
   const MarkdownBody({
@@ -170,9 +200,13 @@ class MarkdownBody extends MarkdownWidget {
     MarkdownStyleSheet styleSheet,
     SyntaxHighlighter syntaxHighlighter,
     MarkdownTapLinkCallback onTapLink,
-    Directory imageDirectory,
     int maxLines,
     TextOverflow overflow,
+    String imageDirectory,
+    md.ExtensionSet extensionSet,
+    MarkdownImageBuilder imageBuilder,
+    MarkdownCheckboxBuilder checkboxBuilder,
+    this.shrinkWrap = false,
   }) : super(
           key: key,
           data: data,
@@ -182,12 +216,19 @@ class MarkdownBody extends MarkdownWidget {
           imageDirectory: imageDirectory,
           maxLines: maxLines,
           overflow: overflow,
+          extensionSet: extensionSet,
+          imageBuilder: imageBuilder,
+          checkboxBuilder: checkboxBuilder,
         );
+
+  /// See [ScrollView.shrinkWrap]
+  final bool shrinkWrap;
 
   @override
   Widget build(BuildContext context, List<Widget> children) {
-    if (children.length == 1) return children.single;
-    return new Column(
+    if (children.length == 1 && !shrinkWrap) return children.single;
+    return Column(
+      mainAxisSize: shrinkWrap ? MainAxisSize.min : MainAxisSize.max,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: children,
     );
@@ -196,13 +237,13 @@ class MarkdownBody extends MarkdownWidget {
 
 /// A scrolling widget that parses and displays Markdown.
 ///
-/// Supports all standard Markdown from the original
-/// [Markdown specification](https://daringfireball.net/projects/markdown/).
+/// Supports all GitHub Flavored Markdown from the
+/// [specification](https://github.github.com/gfm/).
 ///
 /// See also:
 ///
 ///  * [MarkdownBody], which is a non-scrolling container of Markdown.
-///  * <https://daringfireball.net/projects/markdown/>
+///  * <https://github.github.com/gfm/>
 class Markdown extends MarkdownWidget {
   /// Creates a scrolling widget that parses and displays Markdown.
   const Markdown({
@@ -211,10 +252,15 @@ class Markdown extends MarkdownWidget {
     MarkdownStyleSheet styleSheet,
     SyntaxHighlighter syntaxHighlighter,
     MarkdownTapLinkCallback onTapLink,
-    Directory imageDirectory,
     int maxLines,
     TextOverflow overflow,
+    String imageDirectory,
+    md.ExtensionSet extensionSet,
+    MarkdownImageBuilder imageBuilder,
+    MarkdownCheckboxBuilder checkboxBuilder,
     this.padding: const EdgeInsets.all(16.0),
+    this.physics,
+    this.shrinkWrap: false,
   }) : super(
           key: key,
           data: data,
@@ -224,13 +270,50 @@ class Markdown extends MarkdownWidget {
           imageDirectory: imageDirectory,
           maxLines: maxLines,
           overflow: overflow,
+          extensionSet: extensionSet,
+          imageBuilder: imageBuilder,
+          checkboxBuilder: checkboxBuilder,
         );
 
   /// The amount of space by which to inset the children.
   final EdgeInsets padding;
 
+  /// How the scroll view should respond to user input.
+  ///
+  /// See also: [ScrollView.physics]
+  final ScrollPhysics physics;
+
+  /// Whether the extent of the scroll view in the scroll direction should be
+  /// determined by the contents being viewed.
+  ///
+  /// See also: [ScrollView.shrinkWrap]
+  final bool shrinkWrap;
+
   @override
   Widget build(BuildContext context, List<Widget> children) {
-    return new ListView(padding: padding, children: children);
+    return ListView(
+      padding: padding,
+      physics: physics,
+      shrinkWrap: shrinkWrap,
+      children: children,
+    );
+  }
+}
+
+/// Parse [task list items](https://github.github.com/gfm/#task-list-items-extension-).
+class TaskListSyntax extends md.InlineSyntax {
+  // FIXME: incorrect
+  static final String _pattern = r'^ *\[([ xX])\] +';
+
+  TaskListSyntax() : super(_pattern);
+
+  @override
+  bool onMatch(md.InlineParser parser, Match match) {
+    md.Element el = md.Element.withTag('input');
+    el.attributes['type'] = 'checkbox';
+    el.attributes['disabled'] = 'true';
+    el.attributes['checked'] = '${match[1].trim().isNotEmpty}';
+    parser.addNode(el);
+    return true;
   }
 }
