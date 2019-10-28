@@ -101,6 +101,7 @@ class MarkdownBuilder implements md.NodeVisitor {
     @required this.checkboxBuilder,
     this.maxLines,
     this.overflow = TextOverflow.ellipsis,
+    this.textAlign = TextAlign.left,
   });
 
   /// A delegate that controls how link and `pre` elements behave.
@@ -123,6 +124,9 @@ class MarkdownBuilder implements md.NodeVisitor {
 
   /// Specify the text overflow type, defaults to ellipsis
   final TextOverflow overflow;
+
+  /// Specify the text alignment
+  final TextAlign textAlign;
 
   final List<String> _listIndents = <String>[];
   final List<_BlockElement> _blocks = <_BlockElement>[];
@@ -171,6 +175,7 @@ class MarkdownBuilder implements md.NodeVisitor {
       text: span,
       maxLines: this.maxLines,
       overflow: this.overflow,
+      textAlign: this.textAlign,
     ));
   }
 
@@ -480,6 +485,7 @@ class MarkdownBuilder implements md.NodeVisitor {
           text: mergedSpan,
           maxLines: this.maxLines,
           overflow: this.overflow,
+          textAlign: this.textAlign,
         ));
       } else {
         mergedTexts.add(child);

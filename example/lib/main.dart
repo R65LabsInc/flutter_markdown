@@ -58,6 +58,7 @@ Select the valid headers:
 |`_italic 2_`                           | _italic 2_                          |
 |`**bold 1**`                           |**bold 1**                           |
 |`__bold 2__`                           |__bold 2__                           |
+|`^light^`                              |^light^                              |
 |`This is a ~~strikethrough~~`          |This is a ~~strikethrough~~          |
 |`***italic bold 1***`                  |***italic bold 1***                  |
 |`___italic bold 2___`                  |___italic bold 2___                  |

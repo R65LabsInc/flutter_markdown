@@ -57,6 +57,7 @@ abstract class MarkdownWidget extends StatefulWidget {
     this.imageDirectory,
     this.maxLines,
     this.overflow = TextOverflow.ellipsis,
+    this.textAlign = TextAlign.left,
     this.extensionSet,
     this.imageBuilder,
     this.checkboxBuilder,
@@ -98,6 +99,9 @@ abstract class MarkdownWidget extends StatefulWidget {
 
   /// Specify the text overflow type, defaults to ellipsis
   final TextOverflow overflow;
+
+  /// Specify the text alignment
+  final TextAlign textAlign;
 
   /// Subclasses should override this function to display the given children,
   /// which are the parsed representation of [data].
@@ -147,6 +151,7 @@ class _MarkdownWidgetState extends State<MarkdownWidget> implements MarkdownBuil
       imageDirectory: widget.imageDirectory,
       maxLines: widget.maxLines,
       overflow: widget.overflow,
+      textAlign: widget.textAlign,
       imageBuilder: widget.imageBuilder,
       checkboxBuilder: widget.checkboxBuilder,
     );
@@ -201,7 +206,8 @@ class MarkdownBody extends MarkdownWidget {
     SyntaxHighlighter syntaxHighlighter,
     MarkdownTapLinkCallback onTapLink,
     int maxLines,
-    TextOverflow overflow,
+    TextOverflow overflow = TextOverflow.ellipsis,
+    TextAlign textAlign = TextAlign.left,
     String imageDirectory,
     md.ExtensionSet extensionSet,
     MarkdownImageBuilder imageBuilder,
@@ -216,6 +222,7 @@ class MarkdownBody extends MarkdownWidget {
           imageDirectory: imageDirectory,
           maxLines: maxLines,
           overflow: overflow,
+          textAlign: textAlign,
           extensionSet: extensionSet,
           imageBuilder: imageBuilder,
           checkboxBuilder: checkboxBuilder,
@@ -253,7 +260,8 @@ class Markdown extends MarkdownWidget {
     SyntaxHighlighter syntaxHighlighter,
     MarkdownTapLinkCallback onTapLink,
     int maxLines,
-    TextOverflow overflow,
+    TextOverflow overflow = TextOverflow.ellipsis,
+    TextAlign textAlign = TextAlign.left,
     String imageDirectory,
     md.ExtensionSet extensionSet,
     MarkdownImageBuilder imageBuilder,
@@ -270,6 +278,7 @@ class Markdown extends MarkdownWidget {
           imageDirectory: imageDirectory,
           maxLines: maxLines,
           overflow: overflow,
+          textAlign: textAlign,
           extensionSet: extensionSet,
           imageBuilder: imageBuilder,
           checkboxBuilder: checkboxBuilder,
